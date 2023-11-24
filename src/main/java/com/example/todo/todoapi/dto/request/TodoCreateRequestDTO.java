@@ -1,10 +1,16 @@
 package com.example.todo.todoapi.dto.request;
 
 import com.example.todo.todoapi.entity.Todo;
+import lombok.*;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 
+@Setter @Getter
+@ToString @EqualsAndHashCode
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class TodoCreateRequestDTO {
 
     @NotBlank
@@ -17,6 +23,14 @@ public class TodoCreateRequestDTO {
                 .title(this.title)
                 .build();
     }
-    
-    
+
 }
+
+
+
+
+
+
+
+
+
