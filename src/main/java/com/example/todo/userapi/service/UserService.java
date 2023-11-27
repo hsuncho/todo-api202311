@@ -8,12 +8,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
@@ -23,9 +21,9 @@ public class UserService {
     public UserSignUpResponseDTO create(final UserRequestSignUpDTO dto) {
         String email = dto.getEmail();
 
-        if(userRepository.existsByEmail(email)) { // is email duplicated?
+        if(isDuplicate(email)) {
             log.warn("이메일이 중복되었습니다. - {}", email);
-            throw new RuntimeException("중복된 이메일입니다.");
+            throw new RuntimeException("중복된 이메일 입니다.");
         }
 
         // 패스워드 인코딩
@@ -33,10 +31,26 @@ public class UserService {
         dto.setPassword(encoded);
 
         // dto를 User Entity로 변환해서 저장
-        User saved = userRepository.save(dto.toEntity()); // save가 잘되면 저장된 User 객체를 줄 것
-        log.info("회원가입 정상 수행됨! - saved user - {}", saved);
+        User saved = userRepository.save(dto.toEntity());
+        log.info("회원 가입 정상 수행됨! - saved user - {}", saved);
 
         return new UserSignUpResponseDTO(saved);
+
     }
 
+    public boolean isDuplicate(String email) {
+        return userRepository.existsByEmail(email);
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+

@@ -17,7 +17,8 @@ import javax.servlet.http.HttpServletRequest;
 @Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/api/todos")
-@CrossOrigin(origins = "http://localhost:3000") // localhost:3000에서 요청이 왔을 때 이곳으로 데이터 자원을 보내는 것을 허용한다.
+//@CrossOrigin(origins = "http://localhost:3000") // localhost:3000에서 요청이 왔을 때 이곳으로 데이터 자원을 보내는 것을 허용한다.
+@CrossOrigin
 public class TodoController {
 
     private final TodoService todoService;
@@ -88,7 +89,6 @@ public class TodoController {
                                     .build());
         }
 
-
     }
 
     // 할 일 수정하기
@@ -119,15 +119,5 @@ public class TodoController {
 
     }
 
-
 }
-
-
-
-
-
-
-
-
-
 
