@@ -1,6 +1,7 @@
 package com.example.todo.userapi.service;
 
 import com.example.todo.auth.TokenProvider;
+import com.example.todo.userapi.dto.response.LoginResponseDTO;
 import com.example.todo.userapi.dto.request.UserRequestSignUpDTO;
 import com.example.todo.userapi.dto.response.UserSignUpResponseDTO;
 import com.example.todo.userapi.dto.request.LoginRequestDTO;
@@ -46,7 +47,7 @@ public class UserService {
     }
 
     // 회원 인증
-    public void authenticate(final LoginRequestDTO dto) {
+    public LoginResponseDTO authenticate(final LoginRequestDTO dto) {
         
         // 이메일을 통해 회원 정보 조회
         User user = userRepository.findByEmail(dto.getEmail())
@@ -65,10 +66,13 @@ public class UserService {
 
         log.info("{}님 로그인 성공", user.getUserName());
 
+        // 토큰 프로바이더의 메서드 호출 후 로그인 한 사용자에게만 토큰 제공
+
         // 로그인 성공 후에 클라이언트에게 무엇을 리턴할 것인가
         // -> JWT를 클라이언트에게 발급해주어야 한다!
+        String token = tokenProvider.createToken(user);
 
-        // 토큰 프로바이더의 메서드 호출 후 로그인 한 사용자에게만 토큰 제공
+        return new LoginResponseDTO(user,token);
 
     }
 }
