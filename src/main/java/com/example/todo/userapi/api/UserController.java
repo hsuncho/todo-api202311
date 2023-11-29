@@ -1,5 +1,7 @@
 package com.example.todo.userapi.api;
 
+import com.example.todo.auth.TokenUserInfo;
+import com.example.todo.exception.NoRegisteredArgumentsException;
 import com.example.todo.userapi.dto.request.LoginRequestDTO;
 import com.example.todo.userapi.dto.request.UserRequestSignUpDTO;
 import com.example.todo.userapi.dto.response.LoginResponseDTO;
@@ -7,7 +9,11 @@ import com.example.todo.userapi.dto.response.UserSignUpResponseDTO;
 import com.example.todo.userapi.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.StreamingHttpOutputMessage;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -78,6 +84,31 @@ public class UserController {
         }
     }
 
+    // 일반 회원을 프리미엄 회원으로 승격하는 요청 처리
+    @PutMapping("/promote")
+    // 권한 검사 (해당 권한이 아니라면 인가 처리 거부 -> 403 코드 리턴)
+    // 메서드 호출 전에 권한 검사 -> 요청 당시 토큰에 있는 user 정보가 ROLE_COMMON 이라는 권한을 가지고 있는지 검사.
+    @PreAuthorize("hasRole('ROLE_COMMON')")
+    public ResponseEntity<?> promote (
+            @AuthenticationPrincipal TokenUserInfo userInfo // 인증 정보 가져오기
+            ) {
+        log.info("/api/auth/promote PUT!");
+
+        try {
+            LoginResponseDTO responseDTO = userService.promoteToPremium(userInfo);
+            return ResponseEntity.ok().body(responseDTO);
+        } catch (NoRegisteredArgumentsException | IllegalArgumentException e) {
+            // 예상 가능한 예외 (직접 생성하는 예외 처리)
+            e.printStackTrace();
+            log.warn(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
+        } catch (Exception e) {
+            // 예상하지 못한 예외 처리 (500 error)
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
+        }
+    }
 
 
 }

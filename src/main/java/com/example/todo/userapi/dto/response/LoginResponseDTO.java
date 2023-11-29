@@ -24,6 +24,7 @@ public class LoginResponseDTO {
 
     private String role; // 권한
 
+    // user entity와 token을 받아서 setting 해주는 생성자
     public LoginResponseDTO(User user, String token) {
         this.email = user.getEmail();
         this.userName = user.getUserName();

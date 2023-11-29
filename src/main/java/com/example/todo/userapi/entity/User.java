@@ -8,7 +8,7 @@ import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
-@Setter @Getter
+@Getter
 @ToString @EqualsAndHashCode(of = "id")
 @NoArgsConstructor
 @AllArgsConstructor
@@ -41,4 +41,11 @@ public class User {
 //    @ColumnDefault("'COMMON'") // enum type이어서 안쪽에 홑따옴표
     private Role role = Role.COMMON; // 유저 권한
     // COMMON, PREMIUM, ADMIN
+
+    
+    // 엔터티는 setter가 없는 경우가 많으므로 직접 메서드 선언
+    // 등급 수정 메서드
+    public void changeRole(Role role) {
+        this.role = role; // 해당 객체의 role을 매개값으로 받은 role로 변경
+    }
 }
