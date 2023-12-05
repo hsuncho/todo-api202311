@@ -1,0 +1,42 @@
+
+server:
+  port: 8182
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/jpa?serverTimezone=Asia/Seoul
+    username: spring
+    password: spring
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    # show-sql: true # ?? ??? ??? ???? ??
+    # ?? ?? -> ? DB? ?? ??? ??
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update # ?? DDL ?? ?? -> create? ???? ??? ???? ??? ?? ??
+    database: mysql # DB ?? ??
+  servlet:
+    multipart:
+      max-file-size: 10MB # 1개의 파일의 최대 사이즈
+      max-request-size: 20MB #전체 요청의 최대 사이즈
+
+logging.level:
+  org.hibernate.SQL: debug
+
+# swagger setting
+springdoc:
+  swagger-ui:
+    path: /myapi.html # myapi = changeable / swagger provides html
+
+jwt:
+  secret: n9Yttz+uTGZXLslXeA+WYNRInLSveVsFpB7u1MPUHwApghDktT6Dhb1pWTWLacYe8bE8NwWXfdv01SoP7vHLGg==
+
+kakao:
+  client_id: d068676546ddbfe3bf13c541624d16df
+  redirect_url: http://localhost:3000/oauth/redirected/kakao
+  client_secret: egFBMr7UuSdvbr9Qvc8Yjixwcsr8iBdM
+
+# 업로드 파일 저장 경로
+upload:
+  path: C:/todo_upload
+
