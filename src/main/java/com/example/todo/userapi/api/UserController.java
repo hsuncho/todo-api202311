@@ -9,7 +9,6 @@ import com.example.todo.userapi.dto.response.UserSignUpResponseDTO;
 import com.example.todo.userapi.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +20,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.xml.transform.Result;
 import java.io.File;
 import java.io.IOException;
 
@@ -33,6 +31,14 @@ import java.io.IOException;
 public class UserController {
 
     private final UserService userService;
+
+    // 토큰 값 얻어오기
+    @GetMapping("/status")
+    public ResponseEntity<?> status(
+            @AuthenticationPrincipal TokenUserInfo userInfo
+    ) {
+        return ResponseEntity.ok().build();
+    }
 
     // 이메일 중복 확인 요청 처리
     // GET: /api/auth/check?email=zzzz@xxx.com
@@ -55,13 +61,12 @@ public class UserController {
     public ResponseEntity<?> signUp(
             @Validated @RequestPart("user") UserRequestSignUpDTO dto,
             @RequestPart(value = "profileImage", required = false) MultipartFile profileImg,
-                    // required = false 어떤 사용자는 프로필 사진 등록 안 할 수도 있음
             BindingResult result
     ) {
         log.info("/api/auth POST! - {}", dto);
 
 
-        if (result.hasErrors()) {
+        if(result.hasErrors()) {
             log.warn(result.toString());
             return ResponseEntity.badRequest()
                     .body(result.getFieldError());
@@ -69,59 +74,57 @@ public class UserController {
 
         try {
             String uploadedFilePath = null;
-            if (profileImg != null) {
+            if(profileImg != null) {
                 log.info("attached file name: {}", profileImg.getOriginalFilename());
-
-                // 전달 받은 프로필 이미지를 먼저 지정된 경로에 저장한 후 DB 저장을 위해 경로를 받아오자
+                // 전달받은 프로필 이미지를 먼저 지정된 경로에 저장한 후 DB 저장을 위해 경로를 받아오자.
                 uploadedFilePath = userService.uploadProfileImage(profileImg);
             }
 
             UserSignUpResponseDTO responseDTO = userService.create(dto, uploadedFilePath);
-            return ResponseEntity.ok().body(responseDTO);
-
+            return ResponseEntity.ok()
+                    .body(responseDTO);
         } catch (RuntimeException e) {
             log.warn("이메일 중복!");
             return ResponseEntity.badRequest().body(e.getMessage());
-
-        } catch(Exception e) {
+        } catch (Exception e) {
+            log.warn("기타 예외가 발생했습니다!");
             e.printStackTrace();
-                log.warn("기타 예외가 발생했습니다!");
-                return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
-
-
     }
 
     // 로그인 요청 처리
     @PostMapping("/signin")
     public ResponseEntity<?> signIn(
             @Validated @RequestBody LoginRequestDTO dto
-            // 요청과 함께 넘어온 dto
     ) {
         try {
             LoginResponseDTO responseDTO
                     = userService.authenticate(dto);
-            // 응답과 관련된 dto를 넘겨줘야 함
+
             return ResponseEntity.ok().body(responseDTO);
+
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(e.getMessage());
         }
     }
 
     // 일반 회원을 프리미엄 회원으로 승격하는 요청 처리
     @PutMapping("/promote")
-    // 권한 검사 (해당 권한이 아니라면 인가 처리 거부 -> 403 코드 리턴)
-    // 메서드 호출 전에 권한 검사 -> 요청 당시 토큰에 있는 user 정보가 ROLE_COMMON 이라는 권한을 가지고 있는지 검사.
+    // 권한 검사 (해당 권한이 아니라면 인가처리 거부 -> 403 코드 리턴)
+    // 메서드 호출 전에 권한 검사 -> 요청 당시 토큰에 있는 user 정보가 ROLE_COMMON이라는 권한을 가지고 있는지 검사.
     @PreAuthorize("hasRole('ROLE_COMMON')")
-    public ResponseEntity<?> promote (
-            @AuthenticationPrincipal TokenUserInfo userInfo // 인증 정보 가져오기
-            ) {
+    public ResponseEntity<?> promote(
+            @AuthenticationPrincipal TokenUserInfo userInfo
+    ) {
         log.info("/api/auth/promote PUT!");
 
         try {
             LoginResponseDTO responseDTO = userService.promoteToPremium(userInfo);
-            return ResponseEntity.ok().body(responseDTO);
+            return ResponseEntity.ok()
+                    .body(responseDTO);
         } catch (NoRegisteredArgumentsException | IllegalArgumentException e) {
             // 예상 가능한 예외 (직접 생성하는 예외 처리)
             e.printStackTrace();
@@ -129,8 +132,9 @@ public class UserController {
             return ResponseEntity.badRequest()
                     .body(e.getMessage());
         } catch (Exception e) {
-            // 예상하지 못한 예외 처리 (500 error)
-            return ResponseEntity.badRequest()
+            // 예상하지 못한 예외 처리
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
                     .body(e.getMessage());
         }
     }
@@ -140,37 +144,33 @@ public class UserController {
     public ResponseEntity<?> loadFile(
             @AuthenticationPrincipal TokenUserInfo userInfo
     ) {
-        try {
-            log.info("/api/auth/load-profile GET!, user: {}", userInfo.getEmail());
+        log.info("/api/auth/load-profile - GET!, user: {}", userInfo.getEmail());
 
-            // 클라이언트가 요청한 프로필 사진을 응답해야 함
+        try {
+            // 클라이언트가 요청한 프로필 사진을 응답해야 함.
             // 1. 프로필 사진의 경로부터 얻어야 한다!
-            // 단, 모든 유저가 프로필 사진을 가지는 것은 아님.(filePath = null 일 가능성)
-            String filePath =
-                    userService.findProfilePath(userInfo.getUserId());
+            String filePath
+                    = userService.findProfilePath(userInfo.getUserId());
 
             // 2. 얻어낸 파일 경로를 통해 실제 파일 데이터를 로드하기.
             File profileFile = new File(filePath);
 
-            // 모든 사용자가 프로필 사진을 가지는 것은 아니다. -> 프로필 사진이 없는 사람들은 경로가 존재하지 않을 것
-            // 만약 존재하지 않는 경로라면 클라이언트로 404 status를 리턴
-
+            // 모든 사용자가 프로필 사진을 가지는 것은 아니다. -> 프사가 없는 사람들은 경로가 존재하지 않을 것이다.
+            // 만약 존재하지 않는 경로라면 클라이언트로 404 status를 리턴.
             if(!profileFile.exists()) {
-                if(filePath.startsWith("http://") ) {
-                    log.info("\n\n\n"+filePath+"\n\n\n");
+                if(filePath.startsWith("http://")) {
                     return ResponseEntity.ok().body(filePath);
                 }
                 return ResponseEntity.notFound().build();
             }
 
-            // 해당 경로에 저장된 파일을 바이터 배열로 직렬화해서 리턴
+            // 해당 경로에 저장된 파일을 바이트 배열로 직렬화 해서 리턴.
             byte[] fileData = FileCopyUtils.copyToByteArray(profileFile);
-            
-            // 3. 응답 헤더에 컨텐츠 타입을 설정
+
+            // 3. 응답 헤더에 컨텐츠 타입을 설정.
             HttpHeaders headers = new HttpHeaders();
             MediaType contentType = findExtensionAndGetMediaType(filePath);
-
-            if(contentType == null){
+            if(contentType == null) {
                 return ResponseEntity.internalServerError()
                         .body("발견된 파일은 이미지 파일이 아닙니다.");
             }
@@ -188,33 +188,28 @@ public class UserController {
     }
 
     private MediaType findExtensionAndGetMediaType(String filePath) {
-        
-        // 파일 경로에서 확장자 추출하기
-        // C:/todo_upload/asdnahsjhkjhfbn_abc.jpg
-        String ext
-                = filePath.substring(filePath.lastIndexOf(".")+ 1 );
 
-        // 추출한 확장자를 바탕으로 MediaType을 설정 -> Header에 들어갈 Content-type이 됨
+        // 파일 경로에서 확장자 추출하기
+        // C:/todo_upload/nsadjknjkncjndnjs_abc.jpg
+        String ext
+                = filePath.substring(filePath.lastIndexOf(".") + 1);
+
+        // 추출한 확장자를 바탕으로 MediaType을 설정. -> Header에 들어갈 Content-type이 됨.
         switch (ext.toUpperCase()) {
             case "JPG": case "JPEG":
                 return MediaType.IMAGE_JPEG;
-
             case "PNG":
                 return MediaType.IMAGE_PNG;
-
             case "GIF":
                 return MediaType.IMAGE_GIF;
-
             default:
                 return null;
         }
-
     }
 
     @GetMapping("/kakaoLogin")
     public ResponseEntity<?> kakaoLogin(String code) {
         log.info("/api/auth/kakaoLogin - GET! -code: {}", code);
-
         LoginResponseDTO responseDTO = userService.kakaoService(code);
 
         return ResponseEntity.ok().body(responseDTO);
@@ -225,16 +220,29 @@ public class UserController {
     public ResponseEntity<?> logout(
             @AuthenticationPrincipal TokenUserInfo userInfo
     ) {
-        // 액세스 만료도 해줘야 완전한 로그아웃이 될 것
         log.info("/api/auth/logout - GET! - user: {}", userInfo.getEmail());
 
         String result = userService.logout(userInfo);
-
         return ResponseEntity.ok().body(result);
     }
 
+    // s3에서 불러온 프로필 사진 처리
+    @GetMapping("/load-s3")
+    public ResponseEntity<?> loadS3(
+            @AuthenticationPrincipal TokenUserInfo userInfo
+    ) {
+        log.info("/api/auth/load-s3 - GET - user: {}", userInfo);
 
+        try{
+            String profilePath = userService.findProfilePath(userInfo.getUserId());
+            return ResponseEntity.ok().body(profilePath);
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+
+    }
 
 
 
